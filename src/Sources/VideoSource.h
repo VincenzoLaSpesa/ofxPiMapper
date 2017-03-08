@@ -3,11 +3,6 @@
 #include "ofMain.h"
 #include "BaseSource.h"
 
-#ifdef TARGET_RASPBERRY_PI
- #include "ofxOMXPlayer.h"
- #include "OMXPlayerCache.h"
-#endif
-
 namespace ofx {
 namespace piMapper {
 
@@ -21,27 +16,17 @@ class VideoSource : public BaseSource {
 		static bool useHDMIForAudio;
 
 		VideoSource();
-		~VideoSource();
 
 		string & getPath();
 		void loadVideo(string & path);
 		void clear();
         void togglePause();
-
-		#ifndef TARGET_RASPBERRY_PI
-			void update(ofEventArgs & args);
-		#endif
+	
+		void update(ofEventArgs & args);
 
 	private:
-
-		#ifdef TARGET_RASPBERRY_PI
-			ofxOMXPlayer * omxPlayer;     // Naming different for less confusion
-		#else
-			// Go with ofVideoPlayer or
-			// TODO: High Performance Video player on newer Macs
-			ofVideoPlayer * videoPlayer;
-			bool _initialVolumeSet;
-		#endif
+		unique_ptr<ofVideoPlayer> _videoPlayer;
+		bool _initialVolumeSet;
 
 };
 

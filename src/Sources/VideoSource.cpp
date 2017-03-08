@@ -10,69 +10,51 @@ VideoSource::VideoSource(){
 	loadable = true;
 	loaded = false;
 	type = SourceType::SOURCE_TYPE_VIDEO;
-	#ifdef TARGET_RASPBERRY_PI
-		omxPlayer = 0;
-	#else
-		videoPlayer = 0;
-		_initialVolumeSet = false;
-	#endif
+	_videoPlayer = 0;
+	_initialVolumeSet = false;
 }
-
-VideoSource::~VideoSource(){}
 
 void VideoSource::loadVideo(string & filePath){
 	path = filePath;
 	setNameFromPath(filePath);
-	#ifdef TARGET_RASPBERRY_PI
-		omxPlayer = OMXPlayerCache::instance()->load(filePath);
-		texture = &(omxPlayer->getTextureReference());
-	#else
-		videoPlayer = new ofVideoPlayer();
-		videoPlayer->load(filePath);
-		videoPlayer->setLoopState(OF_LOOP_NORMAL);
-		videoPlayer->play();
-		videoPlayer->setVolume(VideoSource::enableAudio ? 1.0f : 0.0f);
-		texture = &(videoPlayer->getTexture());
-		ofAddListener(ofEvents().update, this, &VideoSource::update);
-	#endif
+	
+	_videoPlayer = make_unique<ofVideoPlayer>();
+	_videoPlayer->load(filePath);
+	_videoPlayer->setLoopState(OF_LOOP_NORMAL);
+	_videoPlayer->play();
+	_videoPlayer->setVolume(VideoSource::enableAudio ? 1.0f : 0.0f);
+	texture = &(_videoPlayer->getTexture());
+	ofAddListener(ofEvents().update, this, &VideoSource::update);
+
 	loaded = true;
 }
 
 void VideoSource::clear(){
 	texture = 0;
-	#ifdef TARGET_RASPBERRY_PI
-		OMXPlayerCache::instance()->unload(path);
-	#else
-		ofRemoveListener(ofEvents().update, this, &VideoSource::update);
-		videoPlayer->stop();
-		videoPlayer->close();
-		delete videoPlayer;
-		videoPlayer = 0;
-	#endif
+	
+	ofRemoveListener(ofEvents().update, this, &VideoSource::update);
+	_videoPlayer->stop();
+	_videoPlayer->close();
+	_videoPlayer.reset();
+	
 	loaded = false;
 }
 
 void VideoSource::togglePause(){
-    #ifdef TARGET_RASPBERRY_PI
-        omxPlayer->togglePause();
-    #else
-        videoPlayer->setPaused(!videoPlayer->isPaused());
-    #endif
+	_videoPlayer->setPaused(!_videoPlayer->isPaused());
 }
 
-#ifndef TARGET_RASPBERRY_PI
-	void VideoSource::update(ofEventArgs & args){
-		if(videoPlayer != 0){
-			if(!_initialVolumeSet){
-				if(videoPlayer->isInitialized()){
-					videoPlayer->setVolume(VideoSource::enableAudio ? 1.0f : 0.0f);
-					_initialVolumeSet = true;
-				}
+void VideoSource::update(ofEventArgs & args){
+	if(_videoPlayer != 0){
+		if(!_initialVolumeSet){
+			if(_videoPlayer->isInitialized()){
+				_videoPlayer->setVolume(VideoSource::enableAudio ? 1.0f : 0.0f);
+				_initialVolumeSet = true;
 			}
-			videoPlayer->update();
 		}
+		_videoPlayer->update();
 	}
-#endif
+}
 
 } // namespace piMapper
 } // namespace ofx
